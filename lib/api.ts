@@ -1,44 +1,42 @@
-import axios from 'axios';
-import toast from 'react-hot-toast';
 import { Note } from '@/types/note';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-
-const token = process.env.NEXT_PUBLIC_NOTEHUB_TOKEN;
-
-//! 🔹 Axios defaults
-const api = axios.create({
-  baseURL: 'https://notehub-public.goit.study/api',
-  headers: {
-    accept: 'application/json',
-    Authorization: `Bearer ${token}`,
-  },
-});
-
-//! 🔹 Error notifications
-api.interceptors.response.use(
-  response => response,
-  error => {
-    const message =
-      error.response?.data?.message || error.message || 'Unknown error';
-    toast.error(`API Error: ${message}`);
-    return Promise.reject(error);
-  }
-);
 
 type NotesResponse = {
   notes: Note[];
   totalPages: number;
 };
 
-//! 🔹 API-функции
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') return '';
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  return 'http://localhost:3000';
+};
+
+const handleResponse = async <T>(res: Response, fallbackMessage: string) => {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const message = body.message ?? fallbackMessage;
+    throw new Error(message);
+  }
+  return (await res.json()) as T;
+};
+
 export const fetchNotes = async (
   page: number,
   search: string
 ): Promise<NotesResponse> => {
-  const { data } = await api.get<NotesResponse>('/notes', {
-    params: { page, perPage: 12, search },
+  const base = getBaseUrl();
+  const qs = new URLSearchParams({
+    page: String(page),
+    perPage: '12',
+    search,
   });
-  return data;
+
+  const res = await fetch(`${base}/api/notes?${qs.toString()}`, {
+    cache: 'no-store',
+  });
+  return handleResponse<NotesResponse>(res, 'Failed to load notes');
 };
 
 export const createNote = async (noteData: {
@@ -46,25 +44,27 @@ export const createNote = async (noteData: {
   content: string;
   tag: string;
 }): Promise<Note> => {
-  const { data } = await api.post<Note>('/notes', noteData, {
+  const base = getBaseUrl();
+  const res = await fetch(`${base}/api/notes`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(noteData),
   });
-  toast.success('Note added successfully!');
-  return data;
+  return handleResponse<Note>(res, 'Failed to create note');
 };
 
 export const deleteNote = async (id: string): Promise<Note> => {
-  const { data } = await api.delete<Note>(`/notes/${id}`);
-  toast.success('Note deleted successfully!');
-  return data;
+  const base = getBaseUrl();
+  const res = await fetch(`${base}/api/notes/${id}`, { method: 'DELETE' });
+  return handleResponse<Note>(res, 'Failed to delete note');
 };
 
 export const getSingleNote = async (id: string): Promise<Note> => {
-  const { data } = await api.get<Note>(`/notes/${id}`);
-  return data;
+  const base = getBaseUrl();
+  const res = await fetch(`${base}/api/notes/${id}`, { cache: 'no-store' });
+  return handleResponse<Note>(res, 'Failed to load note');
 };
 
-//! 🔹 React Query hook
 export const useFetchNotes = (currentPage: number, search: string) => {
   return useQuery({
     queryKey: ['notes', currentPage, search],
