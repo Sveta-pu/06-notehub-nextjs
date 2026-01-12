@@ -18,7 +18,7 @@ export async function generateMetadata({}: NoteDetailsProps): Promise<Metadata> 
 }
 
 const NoteDetails = async ({ params }: NoteDetailsProps) => {
-  const { id } = await params;
+  const { id } = params;
   const queryClient = new QueryClient();
   await queryClient.prefetchQuery({
     queryKey: ['note', id],

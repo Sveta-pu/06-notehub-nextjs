@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { Toaster } from 'react-hot-toast';
 import { useFetchNotes } from '@/lib/api';
@@ -22,14 +22,16 @@ export default function Notes() {
     debouncedSearch
   );
 
-  useEffect(() => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRawSearch(e.target.value);
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  };
 
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        <SearchBox onChange={e => setRawSearch(e.target.value)} />
+        <SearchBox onChange={handleSearchChange} />
+
         {data?.totalPages && data.totalPages > 1 && (
           <Pagination
             pageCount={data.totalPages}
@@ -37,6 +39,7 @@ export default function Notes() {
             onPageChange={setCurrentPage}
           />
         )}
+
         <button onClick={() => setIsModalOpen(true)} className={css.button}>
           Create note +
         </button>
