@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const API_BASE = 'https://notehub-public.goit.study/api';
 const TOKEN = process.env.NOTEHUB_TOKEN;
@@ -8,11 +8,9 @@ const unauthorizedResponse = NextResponse.json(
   { status: 500 }
 );
 
-type Params = {
-  params: { id: string };
-};
+type RouteContext = { params: { id: string } };
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(_request: NextRequest, { params }: RouteContext) {
   if (!TOKEN) return unauthorizedResponse;
 
   const res = await fetch(`${API_BASE}/notes/${params.id}`, {
@@ -35,7 +33,7 @@ export async function GET(_request: Request, { params }: Params) {
   return NextResponse.json(data, { status: 200 });
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   if (!TOKEN) return unauthorizedResponse;
 
   const res = await fetch(`${API_BASE}/notes/${params.id}`, {
