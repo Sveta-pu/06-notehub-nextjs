@@ -4,4 +4,5 @@ export interface Note {
   content: string;
   createdAt: string;
   tag: string;
+  updatedAt: string;
 }
