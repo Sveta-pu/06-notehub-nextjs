@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 const API_BASE = 'https://notehub-public.goit.study/api';
 const TOKEN = process.env.NOTEHUB_TOKEN;
+const getToken = () => (process.env.NOTEHUB_TOKEN ?? '').trim();
 
 const unauthorizedResponse = NextResponse.json(
   { message: 'Server token missing. Set NOTEHUB_TOKEN.' },
@@ -9,6 +10,7 @@ const unauthorizedResponse = NextResponse.json(
 );
 
 export async function GET(request: Request) {
+  const TOKEN = getToken();
   if (!TOKEN) return unauthorizedResponse;
 
   const { searchParams } = new URL(request.url);
