@@ -1,6 +1,6 @@
 import { Note } from '@/types/note';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-
+import axios from 'axios';
 type NotesResponse = {
   notes: Note[];
   totalPages: number;
@@ -13,30 +13,54 @@ const getBaseUrl = () => {
   return 'http://localhost:3000';
 };
 
-const handleResponse = async <T>(res: Response, fallbackMessage: string) => {
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const message = body.message ?? fallbackMessage;
+type ErrorBody = {
+  message?: string;
+};
+
+const getAuthHeader = () => {
+  const token = process.env.NEXT_PUBLIC_API_TOKEN;
+  if (!token) {
+    throw new Error('Missing NEXT_PUBLIC_API_TOKEN for authorized requests');
+  }
+
+  return { Authorization: `Bearer ${token}` };
+};
+
+const getClient = () => {
+  return axios.create({
+    baseURL: getBaseUrl(),
+    headers: getAuthHeader(),
+  });
+};
+
+const handleAxiosError = (error: unknown, fallbackMessage: string) => {
+  if (axios.isAxiosError(error)) {
+    const body = error.response?.data as ErrorBody | undefined;
+    const message = body?.message ?? fallbackMessage;
     throw new Error(message);
   }
-  return (await res.json()) as T;
+
+  throw new Error(fallbackMessage);
 };
 
 export const fetchNotes = async (
   page: number,
   search: string
 ): Promise<NotesResponse> => {
-  const base = getBaseUrl();
-  const qs = new URLSearchParams({
-    page: String(page),
-    perPage: '12',
-    search,
-  });
+  try {
+    const client = getClient();
+    const { data } = await client.get<NotesResponse>('/api/notes', {
+      params: {
+        page,
+        perPage: 12,
+        search,
+      },
+    });
 
-  const res = await fetch(`${base}/api/notes?${qs.toString()}`, {
-    cache: 'no-store',
-  });
-  return handleResponse<NotesResponse>(res, 'Failed to load notes');
+    return data;
+  } catch (error) {
+    handleAxiosError(error, 'Failed to load notes');
+  }
 };
 
 export const createNote = async (noteData: {
@@ -44,25 +68,38 @@ export const createNote = async (noteData: {
   content: string;
   tag: string;
 }): Promise<Note> => {
-  const base = getBaseUrl();
-  const res = await fetch(`${base}/api/notes`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(noteData),
-  });
-  return handleResponse<Note>(res, 'Failed to create note');
+  try {
+    const client = getClient();
+    const { data } = await client.post<Note>('/api/notes', noteData, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    return data;
+  } catch (error) {
+    handleAxiosError(error, 'Failed to create note');
+  }
 };
 
 export const deleteNote = async (id: string): Promise<Note> => {
-  const base = getBaseUrl();
-  const res = await fetch(`${base}/api/notes/${id}`, { method: 'DELETE' });
-  return handleResponse<Note>(res, 'Failed to delete note');
+  try {
+    const client = getClient();
+    const { data } = await client.delete<Note>(`/api/notes/${id}`);
+
+    return data;
+  } catch (error) {
+    handleAxiosError(error, 'Failed to delete note');
+  }
 };
 
 export const getSingleNote = async (id: string): Promise<Note> => {
-  const base = getBaseUrl();
-  const res = await fetch(`${base}/api/notes/${id}`, { cache: 'no-store' });
-  return handleResponse<Note>(res, 'Failed to load note');
+  try {
+    const client = getClient();
+    const { data } = await client.get<Note>(`/api/notes/${id}`);
+
+    return data;
+  } catch (error) {
+    handleAxiosError(error, 'Failed to load note');
+  }
 };
 
 export const useFetchNotes = (currentPage: number, search: string) => {
