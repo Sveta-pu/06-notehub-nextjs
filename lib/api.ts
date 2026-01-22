@@ -3,13 +3,14 @@ import toast from 'react-hot-toast';
 import { Note } from '@/types/note';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
-const token = process.env.NEXT_PUBLIC_NOTEHUB_TOKEN;
+const token = (process.env.NEXT_PUBLIC_NOTEHUB_TOKEN ?? '').trim();
 
 //! 🔹 Axios defaults
 const api = axios.create({
   baseURL: '/api',
   headers: {
     accept: 'application/json',
+    Authorization: `Bearer ${token}`,
   },
 });
 
