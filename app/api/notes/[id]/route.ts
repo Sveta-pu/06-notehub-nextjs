@@ -8,21 +8,16 @@ const unauthorizedResponse = NextResponse.json(
   { status: 500 }
 );
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const TOKEN = getToken();
   if (!TOKEN) return unauthorizedResponse;
 
-  const { searchParams } = new URL(request.url);
-  const page = searchParams.get('page') ?? '1';
-  const perPage = searchParams.get('perPage') ?? '12';
-  const search = searchParams.get('search') ?? '';
+  const { id } = await params;
 
-  const url = new URL(`${API_BASE}/notes`);
-  url.searchParams.set('page', page);
-  url.searchParams.set('perPage', perPage);
-  url.searchParams.set('search', search);
-
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}/notes/${id}`, {
     headers: {
       accept: 'application/json',
       Authorization: `Bearer ${TOKEN}`,
@@ -33,7 +28,7 @@ export async function GET(request: Request) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     return NextResponse.json(
-      { message: body.message ?? 'Failed to fetch notes' },
+      { message: body.message ?? 'Failed to fetch note' },
       { status: res.status }
     );
   }
@@ -42,30 +37,31 @@ export async function GET(request: Request) {
   return NextResponse.json(data, { status: 200 });
 }
 
-export async function POST(request: Request) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const TOKEN = getToken();
   if (!TOKEN) return unauthorizedResponse;
 
-  const payload = await request.json();
+  const { id } = await params;
 
-  const res = await fetch(`${API_BASE}/notes`, {
-    method: 'POST',
+  const res = await fetch(`${API_BASE}/notes/${id}`, {
+    method: 'DELETE',
     headers: {
       accept: 'application/json',
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${TOKEN}`,
     },
-    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     return NextResponse.json(
-      { message: body.message ?? 'Failed to create note' },
+      { message: body.message ?? 'Failed to delete note' },
       { status: res.status }
     );
   }
 
   const data = await res.json();
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(data, { status: 200 });
 }

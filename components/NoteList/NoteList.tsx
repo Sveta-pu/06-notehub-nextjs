@@ -11,21 +11,32 @@ type NoteListProps = {
 
 export default function NoteList({ notes }: NoteListProps) {
   const queryClient = useQueryClient();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const mutation = useMutation({
     mutationFn: deleteNote,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-      setDeletingId(null);
+      setDeletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     },
-    onError: () => {
-      setDeletingId(null);
+    onError: (_error, id) => {
+      setDeletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     },
   });
 
-  const handleDelete = (id: string) => {
-    setDeletingId(id);
+  const handleDelete = (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
+      return;
+    }
+    setDeletingIds(prev => new Set(prev).add(id));
     mutation.mutate(id);
   };
 
@@ -42,13 +53,13 @@ export default function NoteList({ notes }: NoteListProps) {
               View details
             </Link>
             <button
-              onClick={() => handleDelete(item.id)}
+              type="button"
+              onClick={() => handleDelete(item.id, item.title)}
               className={css.button}
-              disabled={mutation.isPending && deletingId === item.id}
+              disabled={deletingIds.has(item.id)}
+              aria-label={`Delete note: ${item.title}`}
             >
-              {mutation.isPending && deletingId === item.id
-                ? 'Deleting...'
-                : 'Delete'}
+              {deletingIds.has(item.id) ? 'Deleting...' : 'Delete'}
             </button>
           </div>
         </li>
